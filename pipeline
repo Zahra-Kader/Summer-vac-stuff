@@ -1,0 +1,32 @@
+#!/bin/bash
+
+echo "enter filename"
+read filename 
+
+readfile $filename 
+#rfifind -psrfits -nooffsets -noscales -time 2 -o rfi_root $filename #small integration time of 2 seconds for rfi. compared to 20 min for pulsars.
+
+centrefreq=$(vap -c freq $filename | awk 'FNR == 2 {print $2}') 
+echo $centrefreq
+bandwidth=$(vap -c bw $filename | awk 'FNR == 2 {print $2}')
+echo $bandwidth
+bandwidth=${bandwidth#-} #absolute value of bandwidth, code doesn't work otherwise
+channelnum=$(vap -c nchan $filename | awk 'FNR == 2 {print $2}')
+echo $channelnum
+sampletime=$(vap -c tsamp $filename | awk 'FNR == 2 {print $2}')
+echo $sampletime
+DDplan.py -l 0 -d 100 -f $centrefreq -b $bandwidth -n $channelnum -t $sampletime 
+
+dmstep=$(DDplan.py -l 0 -d 100 -f $centrefreq -b $bandwidth -n $channelnum -t $sampletime | awk 'FNR == 12 {print $3}')
+numdms=$(DDplan.py -l 0 -d 100 -f $centrefreq -b $bandwidth -n $channelnum -t $sampletime | awk 'FNR == 12 {print $5}')
+prepsubband -psrfits -nooffsets -noscales -nowindow -lodm 0 -dmstep $dmstep -numdms $numdms -mask rfi_root_rfifind.mask -o DM $filename
+
+for ((k=0;k<1000;k+=5))
+do 
+	i=$(bc <<<"scale=2; $k / 10" )
+realfft -fwd DM_DM$i.dat
+done
+
+accelsearch -zmax 0 DM_DM$i.fft
+python /pulsar/psr/software/current/src/workspace//psr-presto-build/label/jessie/presto/python/ACCEL_sift.py > candlist
+

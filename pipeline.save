@@ -1,0 +1,9 @@
+#!/bin/bash
+
+echo "enter filename"
+read filename
+
+rfifind -psrfits -nooffsets -noscales -time 2 -o rfi_root $filename #small integration time of 2 seconds for rfi. compared to 20 min for pulsars.
+
+ap -c freq,bw,tsamp,nchan t171024_050529_add.sf
+DDplan.py -l 0 -d 100.0 -f 1369.0 -b 256 -n 1024 -t 0.000128
