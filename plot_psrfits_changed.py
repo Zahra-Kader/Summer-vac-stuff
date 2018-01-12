@@ -25,11 +25,12 @@ hdulist = pyfits.open(in_file)
 tbdata = hdulist['SUBINT'].data
 hdulist.close()
 
-nchan=512
-nsamp_per_row=1024
+nchan=tbdata.header['NCHAN']
+nsamp_per_row=tbdata.header['NSBLK']
+nbits = tbdata.header['NBITS']
 #################################################################
 #data = np.reshape(np.squeeze(tbdata['DATA']), (1024*2311,512))
-data0 = np.reshape(np.squeeze(tbdata['DATA'][:200]), (nsamp_per_row*200,nchan)).astype(int)
+data0 = np.reshape(np.squeeze(tbdata['DATA'][:200]), (nsamp_per_row*200*nbits/8,nchan)).astype(int)
 '''
 -take first 200 rows of the tbdata out of 5496 (in the case of this data)
 -4096 samples per row but divide by 4 if you are going from 8 bit to 2 bit. Reason being that
@@ -41,7 +42,7 @@ hence np.reshape. The reason for this is to construct freq vs time plot.
 '''
 #data0 = np.reshape(np.squeeze(tbdata['DATA'][0]), (1024,512)).astype(int)
 #print data0
-nbits = 2
+
 '''
 data = np.empty((2048*20,512))
 for i in np.arange(512):
@@ -59,7 +60,7 @@ data = np.bitwise_and(data0, 2**nbits-1)
 #print data[0,:]
 print data.shape   #This shape is of course the dimensions you reshaped it to, which is given in
 #the reshape command
-for k in np.arange(0,4):
+for k in np.arange(0,8/nbits):
     mask = 2**(nbits*k)*(2**nbits-1)
     temp = np.right_shift(np.bitwise_and(data0, mask),(k*nbits))
     print temp.shape
@@ -75,7 +76,7 @@ since k is 0, which makes sense.
 For k=1, we have 12, 1100 in binary, returns fifth and sixth digits and we shift this right,...
 Then we insert temp as a column before every column in the data set
 '''
-data = np.reshape(data,(-1,512)) 
+data = np.reshape(data,(-1,nchan)) 
 print data.shape
 #print data[1,:]
 print data
@@ -85,7 +86,7 @@ print mean #Axis=1 means taking average of each row, which here means averaging
 print mean.shape
 #mean = np.mean(data,axis=1)
 
-plt.imshow(data, aspect='auto', cmap='hot')
+plt.imshow(mean, aspect='auto', cmap='hot')
 #plt.plot(np.arange(len(mean)), mean)
 #print mean[39000:40100].shape, np.arange(39000,40100).shape
 #plt.plot(np.arange(39720,39745), mean[39720:39745])
