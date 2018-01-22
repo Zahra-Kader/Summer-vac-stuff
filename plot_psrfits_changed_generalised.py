@@ -37,12 +37,9 @@ nsamp_per_row=subint.header['NSBLK']
 nbits = subint.header['NBITS']
 #################################################################
 #data = np.reshape(np.squeeze(tbdata['DATA']), (1024*2311,512))
-print np.squeeze(tbdata['DATA'][:200])
-print nsamp_per_row*200*nbits/8
-data0=np.squeeze(tbdata['DATA'][:200])
-#data0 = data0.reshape(nsamp_per_row*200*nbits/8,nchan).astype(int)
-data0 = data0.reshape(-1,nchan).astype(int)
-print data0.shape
+#data0 = np.reshape(np.squeeze(tbdata['DATA'][:200]), (1024*200,512)).astype(int)
+data0 = np.reshape(np.squeeze(tbdata['DATA'][:200]), (nsamp_per_row*200*nbits/8,nchan)).astype(int)
+
 '''
 -take first 200 rows of the tbdata out of 5496 (in the case of this data)
 -4096 samples per row but divide by 4 if you are going from 8 bit to 2 bit. Reason being that
@@ -89,25 +86,70 @@ For k=1, we have 12, 1100 in binary, returns fifth and sixth digits and we shift
 Then we insert temp as a column before every column in the data set
 '''
 data = np.reshape(data,(-1,nchan)) 
+print data.shape,'shape of data'
+var_orig=np.var(data)
+print var_orig,'orig var'
 rows,col=data.shape
-print rows,col
 #print data[1,:]
 #print data
-mean_rows=np.mean(data.reshape(-1,8),axis=1)
-print mean_rows #Axis=1 means taking average of each row, which here means averaging
+n=1
+mylist=[]
+for i in range(1,n+1):
+    num=2**i
+    mylist.append(num)
+var=[]
+var_row=[]
+var_col=[]
+for i in mylist:
+
+    mean_col_only=np.transpose(data)    
+    mean_col_only=mean_col_only.reshape(-1,i)
+    mean_col_only=np.mean(mean_col_only,axis=1)
+    mean_col_only=mean_col_only.reshape(rows/i,col)
+    var_col.append(np.var(mean_col_only))
+    print var_col    
+    
+    mean_rows=np.mean(data.reshape(-1,i),axis=1)
+    print mean_rows #Axis=1 means taking average of each row, which here means averaging
 #over time
-mean_rows=mean_rows.reshape(-1,nchan/8)
+    mean_rows=mean_rows.reshape(-1,nchan/i)
 #plt.imshow(mean_rows, aspect='auto', cmap='hot')
+    var_row.append(np.var(mean_rows))
+    print var_row    
+    mean_col=np.transpose(mean_rows)
+    print mean_col.shape
+    mean_col=mean_col.reshape(-1,i)
 
-mean_col=np.mean(data.reshape(8,-1),axis=0)
-print mean_col.shape
+    rows_col,col_col=mean_col.shape
+    mean_col=np.mean(mean_col,axis=1)
+    print mean_col.shape
 
-mean_col=mean_col.reshape(rows/8,nchan)
+    mean_col=mean_col.reshape(rows_col/i,col_col)
+    print mean_col.shape
 
+    mean_col=np.transpose(mean_col)
+    print mean_col.shape
+    
+    #var=np.var(mean_col)
+    var.append(np.var(mean_col))
+    print var,i
+    
+print var,'both'
+print var_row,'row'
+print var_col,'col'
+print np.transpose(var)
+print np.transpose(mylist)
+Xnew = np.hstack((np.transpose(mylist),np.transpose(var)))
+print Xnew
+print Xnew.shape
+trans=np.transpose(Xnew)
+print trans
+print trans.shape
 #mean = np.mean(data,axis=1)
 #plt.plot(mean)
-plt.imshow(mean_col, aspect='auto', cmap='hot')
-
+#plt.imshow(np.transpose(mean_col), aspect='auto', cmap='hot')
+#plt.imshow(var, aspect='auto', cmap='hot')
+plt.plot(var,'o')
 #plt.plot(np.arange(len(mean)), mean)
 #print mean[39000:40100].shape, np.arange(39000,40100).shape
 #plt.plot(np.arange(39720,39745), mean[39720:39745])
